@@ -14,9 +14,6 @@ const BLOQUES = [
   "09:00","09:10","09:20","09:30","09:40","09:50",
   "10:00","10:10","10:20","10:30","10:40","10:50",
   "11:00","11:10","11:20","11:30","11:40","11:50",
-
-  // ⛔ 12:00–13:00 almuerzo
-
   "13:00","13:10","13:20","13:30","13:40","13:50",
   "14:00","14:10","14:20","14:30","14:40","14:50",
   "15:00","15:10","15:20","15:30","15:40","15:50",
@@ -34,7 +31,6 @@ function ocultarTodo() {
 }
 
 /* ================= SPA ================= */
-
 function volverInicio() {
   ocultarTodo();
   document.getElementById("vista-principal").style.display = "grid";
@@ -51,7 +47,7 @@ function abrirModal(corte, precio) {
   document.getElementById("modal").style.display = "flex";
 
   const fechaInput = document.getElementById("fecha");
-  fechaInput.dispatchEvent(new Event("change")); // 🔥 CLAVE
+  fechaInput.dispatchEvent(new Event("change"));
 }
 
 function cerrarModal() {
@@ -82,7 +78,6 @@ function formatearHora12(hora24) {
 
 function convertirHoraTextoABloque(texto) {
   texto = texto.toLowerCase().replace(/\s/g, "");
-
   let match = texto.match(/(\d{1,2}):?(\d{0,2})(am|pm)/);
   if (!match) return null;
 
@@ -94,10 +89,10 @@ function convertirHoraTextoABloque(texto) {
   if (ampm === "am" && h === 12) h = 0;
 
   const hora24 = `${h.toString().padStart(2,"0")}:${m.toString().padStart(2,"0")}`;
-
   return BLOQUES.includes(hora24) ? hora24 : null;
 }
 
+/* ================= SUGERENCIAS ================= */
 function sugerirHora(fecha, horaInicio, bloquesServicio) {
   const reservas = JSON.parse(localStorage.getItem("reservas")) || {};
   const ocupados = reservas[fecha] || [];
@@ -115,14 +110,36 @@ function sugerirHora(fecha, horaInicio, bloquesServicio) {
       }
     }
 
-    if (disponible) {
-      return BLOQUES[i];
-    }
+    if (disponible) return BLOQUES[i];
   }
 
   return null;
 }
 
+function sugerirHoraAnterior(fecha, horaInicio, bloquesServicio) {
+  const reservas = JSON.parse(localStorage.getItem("reservas")) || {};
+  const ocupados = reservas[fecha] || [];
+
+  let index = BLOQUES.indexOf(horaInicio);
+
+  for (let i = index - 1; i >= 0; i--) {
+    let disponible = true;
+
+    for (let j = 0; j < bloquesServicio; j++) {
+      const b = BLOQUES[i + j];
+      if (!b || ocupados.includes(b)) {
+        disponible = false;
+        break;
+      }
+    }
+
+    if (disponible) return BLOQUES[i];
+  }
+
+  return null;
+}
+
+/* ================= CARGAR HORAS ================= */
 function cargarHoras(fecha) {
   const select = document.getElementById("hora");
   select.innerHTML = `<option value="">Selecciona la hora</option>`;
@@ -132,15 +149,12 @@ function cargarHoras(fecha) {
 
   const hoy = new Date();
   const fechaSeleccionada = new Date(fecha + "T00:00:00");
-
   const bloquesServicio = bloquesNecesarios(corteSeleccionado || "Corte");
 
   BLOQUES.forEach((bloque, i) => {
 
-    // 🔒 SOLO permitir inicios alineados
     if (i % bloquesServicio !== 0) return;
 
-    // Verificar espacio continuo
     let disponible = true;
     for (let j = 0; j < bloquesServicio; j++) {
       const b = BLOQUES[i + j];
@@ -172,62 +186,69 @@ function enviarWhatsApp() {
   const pago = document.getElementById("pago").value;
   const dia = document.getElementById("diaSemana").textContent;
 
-   if (!nombre || !fecha || !horaTexto || !pago) {
-     alert("Completa todos los campos");
-     return;
-   }
-
-  if (!hora) {
-    document.getElementById("sugerenciaHora").textContent =
-    "Formato inválido. Ejemplo: 10:00 am";
+  if (!nombre || !fecha || !horaTexto || !pago) {
+    alert("Completa todos los campos");
     return;
   }
 
-   // 🔒 VALIDAR QUE NO SEA HORA PASADA
-   const hoy = new Date();
-   const fechaSeleccionada = new Date(fecha + "T00:00:00");
+  if (!hora) {
+    document.getElementById("sugerenciaHora").textContent =
+      "Formato inválido. Ejemplo: 10:00 am";
+    return;
+  }
 
-   const [h, m] = hora.split(":").map(Number);
-   const horaSeleccionada = new Date(fechaSeleccionada);
-   horaSeleccionada.setHours(h, m, 0, 0);
+  const hoy = new Date();
+  const fechaSeleccionada = new Date(fecha + "T00:00:00");
 
-   const esHoy = hoy.toDateString() === fechaSeleccionada.toDateString();
+  const [h, m] = hora.split(":").map(Number);
+  const horaSeleccionada = new Date(fechaSeleccionada);
+  horaSeleccionada.setHours(h, m, 0, 0);
 
-   if (esHoy && horaSeleccionada <= hoy) {
-     document.getElementById("sugerenciaHora").textContent =
-     "❌ No puedes reservar una hora que ya pasó.";
-   return;
-   }
+  const esHoy = hoy.toDateString() === fechaSeleccionada.toDateString();
+  if (esHoy && horaSeleccionada <= hoy) {
+    document.getElementById("sugerenciaHora").textContent =
+      "No puedes reservar una hora que ya pasó.";
+    return;
+  }
 
-
-   const reservas = JSON.parse(localStorage.getItem("reservas")) || {};
-   if (!reservas[fecha]) reservas[fecha] = [];
+  const reservas = JSON.parse(localStorage.getItem("reservas")) || {};
+  if (!reservas[fecha]) reservas[fecha] = [];
 
   const bloques = bloquesNecesarios(corteSeleccionado);
   const index = BLOQUES.indexOf(hora);
 
-  // 🔒 Verificamos que haya espacio suficiente
   for (let i = 0; i < bloques; i++) {
-   const bloque = BLOQUES[index + i];
-   if (!bloque || reservas[fecha].includes(bloque)) {
-     const sugerida = sugerirHora(fecha, hora, bloques);
-     if (sugerida) {
-      document.getElementById("sugerenciaHora").innerHTML =
-        `❌ Esa hora no está disponible.<br>
-         ✅ Turno cercano: ${formatearHora12(sugerida)}`;
-     } else {
-      document.getElementById("sugerenciaHora").textContent =
-        "❌ No hay horarios disponibles ese día";
-     }
+    const bloque = BLOQUES[index + i];
+    if (!bloque || reservas[fecha].includes(bloque)) {
+
+      const siguiente = sugerirHora(fecha, hora, bloques);
+      const anterior = sugerirHoraAnterior(fecha, hora, bloques);
+
+      if (siguiente || anterior) {
+        let mensaje = `Hora no Disponible.<br>Turnos más cercanos:<br>`;
+
+        if (anterior) {
+          mensaje += `• ${formatearHora12(anterior)}<br>`;
+        }
+
+        if (siguiente) {
+          mensaje += `• ${formatearHora12(siguiente)}`;
+        }
+
+        document.getElementById("sugerenciaHora").innerHTML = mensaje;
+      } else {
+        document.getElementById("sugerenciaHora").textContent =
+          "No hay horarios disponibles ese día";
+      }
 
       return;
     }
   }
 
-  // Guardamos todos los bloques ocupados
   for (let i = 0; i < bloques; i++) {
     reservas[fecha].push(BLOQUES[index + i]);
   }
+
   document.getElementById("sugerenciaHora").textContent = "";
   localStorage.setItem("reservas", JSON.stringify(reservas));
 
