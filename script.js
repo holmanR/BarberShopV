@@ -1,4 +1,3 @@
-/* ================= VARIABLES ================= */
 let corteSeleccionado = "";
 let precioSeleccionado = "";
 
@@ -6,7 +5,7 @@ function bloquesNecesarios(servicio) {
   if (servicio == "degradado") return 3; // 40 min
   if (servicio === "Cejas") return 1;   // 10 min
   if (servicio === "Barba") return 2;   // 20 min
-  return 6; // Cortes y completo = 1 hora
+  return 6;
 }
 
 const BLOQUES = [
@@ -23,14 +22,12 @@ const BLOQUES = [
   "19:00","19:10","19:20","19:30","19:40","19:50"
 ];
 
-/* ================= UTILIDAD ================= */
 function ocultarTodo() {
   document.querySelectorAll(".productos").forEach(seccion => {
     seccion.style.display = "none";
   });
 }
 
-/* ================= SPA ================= */
 function volverInicio() {
   ocultarTodo();
   document.getElementById("vista-principal").style.display = "grid";
@@ -38,7 +35,6 @@ function volverInicio() {
   window.scrollTo(0, 0);
 }
 
-/* ================= MODAL ================= */
 function abrirModal(corte, precio) {
   corteSeleccionado = corte;
   precioSeleccionado = precio;
@@ -55,7 +51,6 @@ function cerrarModal() {
   document.querySelector(".hero").style.display = "flex";
 }
 
-/* ================= FECHA / HORAS ================= */
 document.addEventListener("DOMContentLoaded", () => {
   const fecha = document.getElementById("fecha");
   fecha.min = new Date().toISOString().split("T")[0];
@@ -92,7 +87,6 @@ function convertirHoraTextoABloque(texto) {
   return BLOQUES.includes(hora24) ? hora24 : null;
 }
 
-/* ================= SUGERENCIAS ================= */
 function sugerirHora(fecha, horaInicio, bloquesServicio) {
   const reservas = JSON.parse(localStorage.getItem("reservas")) || {};
   const ocupados = reservas[fecha] || [];
@@ -139,7 +133,6 @@ function sugerirHoraAnterior(fecha, horaInicio, bloquesServicio) {
   return null;
 }
 
-/* ================= CARGAR HORAS ================= */
 function cargarHoras(fecha) {
   const select = document.getElementById("hora");
   select.innerHTML = `<option value="">Selecciona la hora</option>`;
@@ -177,7 +170,6 @@ function cargarHoras(fecha) {
   });
 }
 
-/* ================= WHATSAPP ================= */
 function enviarWhatsApp() {
   const nombre = document.getElementById("nombre").value;
   const fecha = document.getElementById("fecha").value;
@@ -264,7 +256,6 @@ function enviarWhatsApp() {
   cerrarModal();
 }
 
-/* ================= BARRA SUPERIOR ================= */
 function mostrarGaleria() {
   ocultarTodo();
   document.getElementById("vista-galeria").style.display = "grid";
